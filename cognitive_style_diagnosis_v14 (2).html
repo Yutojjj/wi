@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>認知スタイル診断 v14</title>
+  <style>
+    :root {
+      --bg:#f7f5fb; --card:#fff; --text:#262133; --muted:#6d6578; --line:#e5deef;
+      --main:#8f63b8; --soft:#f0e4f8; --accent:#2f8fb2; --green:#36a66f; --orange:#d98c27;
+      --shadow:0 8px 24px rgba(43,30,60,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      color:var(--text); background:linear-gradient(180deg,#fbf9ff 0%,var(--bg) 100%); line-height:1.6;
+    }
+    header{
+      position:sticky; top:0; z-index:20; background:rgba(247,245,251,.97);
+      backdrop-filter:blur(12px); border-bottom:1px solid var(--line); padding:12px 14px;
+    }
+    .wrap{max-width:1000px; margin:0 auto; padding:16px 14px 132px}
+    header .wrap{padding:0}
+    h1{margin:0; font-size:19px; letter-spacing:.02em}
+    .lead{margin:5px 0 0; color:var(--muted); font-size:13px}
+    .top-grid{display:grid; gap:10px; margin-top:10px}
+    .mode-toggle{display:grid; grid-template-columns:1fr 1fr; gap:9px}
+    .mode-toggle button{
+      border:1px solid var(--line); border-radius:999px; padding:11px 10px; background:#fff;
+      font-weight:850; color:var(--muted); font-size:14px;
+    }
+    .mode-toggle button.active{background:var(--main); color:#fff; border-color:var(--main)}
+    .progress-label{display:flex; justify-content:space-between; gap:10px; color:var(--muted); font-size:12px}
+    .progress{height:9px; border-radius:999px; background:#ece6f2; overflow:hidden}
+    .progress>div{height:100%; width:0%; background:linear-gradient(90deg,var(--main),#bd8bdd); transition:width .2s ease}
+    .note{color:var(--muted); font-size:13px; background:#fff; border:1px dashed var(--line); border-radius:14px; padding:12px; margin:0 0 14px}
+    .question{background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); padding:15px; margin:12px 0}
+    .q-head{display:grid; grid-template-columns:34px 1fr; gap:10px; align-items:start; margin-bottom:12px}
+    .num{width:30px; height:30px; border-radius:999px; background:var(--soft); color:var(--main); display:grid; place-items:center; font-weight:900; font-size:13px}
+    .q-title{font-size:16px; color:var(--text); font-weight:900; line-height:1.45; padding-top:2px}
+    .choice-text{display:grid; grid-template-columns:1fr; gap:8px; margin-bottom:11px}
+    .side{border:1px solid var(--line); border-radius:14px; padding:10px; background:#fcfbfe; font-size:14px; font-weight:800; line-height:1.55}
+    .side span{display:block; font-size:11px; color:var(--muted); margin-bottom:2px; font-weight:800}
+    .scale{display:grid; grid-template-columns:repeat(5,1fr); gap:7px; margin-top:9px}
+    .scale button{border:1px solid var(--line); background:#fff; border-radius:14px; min-height:48px; padding:7px 3px; color:var(--muted); font-weight:900; font-size:13px}
+    .scale button .small{display:block; font-size:9px; font-weight:750; line-height:1.2; margin-top:2px}
+    .scale button.selected{border-color:var(--main); background:var(--soft); color:var(--main); box-shadow:0 0 0 4px rgba(143,99,184,.12)}
+    .labels{display:grid; grid-template-columns:1fr 1fr 1fr; color:var(--muted); font-size:10px; margin-top:5px; padding:0 2px; gap:6px}
+    .labels span:nth-child(2){text-align:center} .labels span:nth-child(3){text-align:right}
+
+    .result{background:#fff; border:1px solid var(--line); border-radius:22px; box-shadow:var(--shadow); padding:18px; margin:18px 0}
+    .hidden{display:none}
+    .result h2{margin:0 0 6px; font-size:20px}
+    .dashboard{display:grid; gap:12px; margin-top:12px}
+    .hero{border:1px solid var(--line); border-radius:22px; padding:16px; background:linear-gradient(180deg,#fff,#fcf7ff)}
+    .hero-grid{display:grid; gap:12px}
+    .type{font-size:42px; font-weight:950; letter-spacing:.08em; color:var(--main); margin:0}
+    .confidence{display:inline-block; border-radius:999px; padding:6px 10px; background:var(--soft); color:var(--main); font-weight:900; font-size:13px}
+    .summary-list{display:grid; gap:8px; margin-top:10px}
+    .summary-item{border:1px solid var(--line); border-radius:14px; padding:10px; background:#fff; font-size:13px}
+    .result-grid{display:grid; gap:12px; margin-top:12px}
+    .result-card{border:1px solid var(--line); border-radius:18px; padding:14px; background:#fcfbfe}
+    .result-card h3{margin:0; font-size:16px}
+    .sub{color:var(--muted); font-size:13px; margin:4px 0 10px}
+    .bars{display:grid; gap:10px; margin-top:12px}
+    .barline{display:grid; gap:4px}
+    .bar-top{display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:12px; color:var(--muted)}
+    .bar-top strong{color:var(--text); white-space:nowrap}
+    .bar{position:relative; height:12px; border-radius:999px; background:#ece7f1; overflow:hidden}
+    .bar span{display:block; height:100%; border-radius:999px; background:var(--accent); transition:width .2s ease}
+    .rank{display:grid; gap:8px; margin-top:10px}
+    .rank-row{display:grid; grid-template-columns:64px 1fr 48px; gap:8px; align-items:center; font-size:13px}
+    .mini{height:9px; border-radius:999px; background:#ece7f1; overflow:hidden}
+    .mini span{display:block; height:100%; background:var(--main); border-radius:999px}
+    .overlay{display:grid; gap:8px; margin-top:10px}
+    .pill{border:1px solid var(--line); border-radius:14px; padding:10px; background:#fff; font-size:13px}
+    .pill strong{color:var(--main)}
+    textarea{width:100%; min-height:220px; border:1px solid var(--line); border-radius:14px; padding:10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; color:var(--text); background:#fff; margin-top:10px}
+    .copy-row{display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px}
+    .copy-btn{border:0; border-radius:999px; padding:12px 10px; font-weight:900; color:#fff; font-size:14px}
+    .copy-btn.full{background:var(--main)} .copy-btn.doc{background:var(--green)} .copy-btn.summary{background:var(--orange)}
+    .toast{position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:#252235; color:#fff; padding:10px 14px; border-radius:999px; font-size:13px; opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:50; white-space:nowrap}
+    .toast.show{opacity:1}
+    .footer-actions{position:fixed; left:0; right:0; bottom:0; z-index:30; background:rgba(247,245,251,.97); backdrop-filter:blur(12px); border-top:1px solid var(--line); padding:10px 14px}
+    .action-grid{max-width:1000px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .primary,.secondary{border-radius:999px; padding:13px 10px; font-size:15px; font-weight:900}
+    .primary{border:0; background:var(--main); color:#fff} .secondary{border:1px solid var(--line); background:#fff; color:var(--main)}
+
+    .mode-end-card{
+      margin:18px 0 6px; border:1px solid var(--line); border-radius:20px;
+      background:#fff; box-shadow:var(--shadow); padding:16px; text-align:center;
+    }
+    .mode-end-card h3{margin:0 0 6px; font-size:16px}
+    .mode-end-card p{margin:0 0 12px; color:var(--muted); font-size:13px}
+    .work-jump-btn{
+      width:100%; border:0; border-radius:999px; padding:14px 14px;
+      font-weight:950; font-size:15px; background:linear-gradient(90deg,#8f63b8,#2f8fb2); color:#fff;
+    }
+    .choice-card-red{border-color:#f1c5c5; background:#fff8f8}
+    .choice-card-blue{border-color:#bcd5f4; background:#f7fbff}
+    .choice-badge{display:inline-block; border-radius:999px; padding:3px 9px; font-size:11px; font-weight:900; margin-bottom:5px}
+    .choice-badge.red{background:#fde2e2; color:#a93535}
+    .choice-badge.blue{background:#dfefff; color:#2367a5}
+
+
+        .scale button.opt1,.scale button.opt2{
+      background:#fff7f7;
+      border-color:#efcaca;
+      color:#9e3b3b;
+    }
+    .scale button.opt4,.scale button.opt5{
+      background:#f7fbff;
+      border-color:#c7daf3;
+      color:#2e6298;
+    }
+    .scale button.opt3{
+      background:#fafafa;
+      border-color:#dddddd;
+      color:#666;
+    }
+    .scale button.opt1.selected,.scale button.opt2.selected{
+      background:#fde6e6;
+      border-color:#da8181;
+      color:#8c2626;
+      box-shadow:0 0 0 4px rgba(220,120,120,.16);
+    }
+    .scale button.opt4.selected,.scale button.opt5.selected{
+      background:#e7f1fd;
+      border-color:#6ea4df;
+      color:#1f568e;
+      box-shadow:0 0 0 4px rgba(97,150,220,.16);
+    }
+    .scale button.opt3.selected{
+      background:#f0f0f0;
+      border-color:#bdbdbd;
+      color:#444;
+      box-shadow:0 0 0 4px rgba(120,120,120,.10);
+    }
+    .labels span:first-child{color:#a93535; font-weight:800}
+    .labels span:nth-child(2){color:#666; font-weight:800}
+    .labels span:nth-child(3){color:#2367a5; font-weight:800}
+
+    @media(min-width:760px){
+      h1{font-size:24px} .choice-text{grid-template-columns:1fr 1fr} .result-grid{grid-template-columns:1fr 1fr} .hero-grid{grid-template-columns:260px 1fr} .scale button{min-height:56px} .copy-row{grid-template-columns:1fr 1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>認知スタイル診断 v14</h1>
+    <p class="lead">問い＋赤青の選択肢で自然に答えられる診断。</p>
+    <div class="top-grid">
+      <div class="mode-toggle">
+        <button id="dailyBtn" class="active" onclick="setMode('daily')">日常モード</button>
+        <button id="activityBtn" onclick="setMode('activity')">仕事モード</button>
+      </div>
+      <div class="progress-label">
+        <span id="progressText">回答 0 / 58</span>
+        <span id="currentModeText">現在：日常モード</span>
+      </div>
+      <div class="progress"><div id="progressBar"></div></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="note">
+    仕事モードは、仕事・制作・チーム活動など、目的を持って何かを進める場面です。回答はブラウザ内に保存されます。
+  </div>
+  <section id="questions"></section>
+
+  <section class="result hidden" id="result">
+    <h2>結果ダッシュボード</h2>
+    <p class="sub">ここでは簡易表示だけを出します。詳細な読み解きは「HTMLファイル出力プロンプトコピー」を使ってください。</p>
+
+    <div class="dashboard">
+      <div class="hero">
+        <div class="hero-grid">
+          <div>
+            <p class="sub">基本タイプ</p>
+            <p class="type" id="coreType">----</p>
+            <span class="confidence" id="confidenceText">信頼度: --</span>
+          </div>
+          <div>
+            <div class="summary-list" id="summaryCards"></div>
+          </div>
+        </div>
+        <div class="bars" id="coreBars"></div>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-card">
+          <h3>日常モード 表面スタイル</h3>
+          <p class="type" id="dailyType" style="font-size:30px;">----</p>
+          <p class="sub" id="dailySummary"></p>
+          <div class="bars" id="dailyBars"></div>
+        </div>
+        <div class="result-card">
+          <h3>仕事モード 表面スタイル</h3>
+          <p class="type" id="activityType" style="font-size:30px;">----</p>
+          <p class="sub" id="activitySummary"></p>
+          <div class="bars" id="activityBars"></div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <h3>候補タイプ</h3>
+        <div class="rank" id="coreRank"></div>
+      </div>
+
+      <div class="result-card">
+        <h3>場面ごとの使い分け</h3>
+        <div class="overlay" id="overlay"></div>
+      </div>
+    </div>
+
+    <h3>コピー用プロンプト</h3>
+    <p class="sub">他のAIに渡すなら「HTMLファイル出力プロンプトコピー」がおすすめです。診断結果を章立てレポートとして出す指示になっています。</p>
+    <div class="copy-row">
+      <button class="copy-btn doc" onclick="copyDocumentPrompt()">HTMLファイル出力プロンプトコピー</button>
+      <button class="copy-btn full" onclick="copyAnalysisPrompt()">分析プロンプトコピー</button>
+      <button class="copy-btn summary" onclick="copySummary()">結果だけコピー</button>
+    </div>
+    <textarea id="promptBox" readonly></textarea>
+  </section>
+</main>
+
+<div id="toast" class="toast">コピーしました</div>
+
+<div class="footer-actions">
+  <div class="action-grid">
+    <button class="secondary" onclick="resetAll()">リセット</button>
+    <button class="primary" onclick="showResult()">結果を見る</button>
+  </div>
+</div>
+
+<script>
+const DATA = {"daily": [{"axis": "EI", "layer": "core", "sub": "think", "L": "E", "R": "I", "left": "話しながら少しずつ形にすることが多い", "right": "一人で整理してから言葉にすることが多い", "prompt": "考えごとはどうやって形にする？"}, {"axis": "EI", "layer": "core", "sub": "energy", "L": "E", "R": "I", "left": "気分がさらに乗りやすい", "right": "一人で落ち着く時間がほしくなる", "prompt": "楽しい集まりの後はどう感じやすい？"}, {"axis": "EI", "layer": "core", "sub": "interest", "L": "E", "R": "I", "left": "誰かに話したくなる", "right": "まず自分の中で味わいたくなる", "prompt": "面白い話を見つけた時は？"}, {"axis": "EI", "layer": "core", "sub": "decision", "L": "E", "R": "I", "left": "人に話して反応を見ながら決めやすい", "right": "一度距離を置いて自分で考えると決めやすい", "prompt": "迷った時はどうする？"}, {"axis": "EI", "layer": "adaptive", "sub": "communication", "L": "E", "R": "I", "left": "その場で声をかけて状況を動かす", "right": "先に要点を整理してから伝える", "prompt": "必要な時、状況をどう動かす？"}, {"axis": "EI", "layer": "adaptive", "sub": "learning", "L": "E", "R": "I", "left": "人に聞きながら掴む方が早い", "right": "まず調べてから聞く方が早い", "prompt": "分からないことがある時は？"}, {"axis": "EI", "layer": "adaptive", "sub": "share", "L": "E", "R": "I", "left": "早めに外に出して磨く", "right": "少し整った考えにしてから外に出す", "prompt": "まだ粗い考えはどう扱う？"}, {"axis": "EI", "layer": "adaptive", "sub": "group", "L": "E", "R": "I", "left": "話題を出して流れを作る", "right": "様子を見て必要な時に動く", "prompt": "場が止まっている時は？"}, {"axis": "NS", "layer": "core", "sub": "learn", "L": "N", "R": "S", "left": "まず全体の考え方を知る", "right": "まず一つ実際にやってみる", "prompt": "初めて学ぶことは、どう入ると分かりやすい？"}, {"axis": "NS", "layer": "core", "sub": "movie", "L": "N", "R": "S", "left": "テーマや意味を考えることが多い", "right": "場面や人物の印象を思い出すことが多い", "prompt": "映画や物語を見た後は？"}, {"axis": "NS", "layer": "core", "sub": "conversation", "L": "N", "R": "S", "left": "話の裏にある流れやパターン", "right": "実際に何が起きたかや具体的な状況", "prompt": "会話では何が気になりやすい？"}, {"axis": "NS", "layer": "core", "sub": "choice", "L": "N", "R": "S", "left": "今後どう広がるかを想像しやすい", "right": "今ちゃんと使えるかを確認しやすい", "prompt": "何かを選ぶ時は？"}, {"axis": "NS", "layer": "core", "sub": "explain", "L": "N", "R": "S", "left": "たとえ話や考え方から入る", "right": "手順や実例から入る", "prompt": "説明はどちらから入ると分かりやすい？"}, {"axis": "NS", "layer": "core", "sub": "memory", "L": "N", "R": "S", "left": "そこから得た意味や教訓として残る", "right": "見たもの・聞いたもの・その場の様子として残る", "prompt": "出来事はどんな形で残りやすい？"}, {"axis": "NS", "layer": "core", "sub": "problem", "L": "N", "R": "S", "left": "前提や見方を変えると解ける気がする", "right": "事実を一つずつ確認すると解ける気がする", "prompt": "違和感がある時は、どこから考える？"}, {"axis": "NS", "layer": "core", "sub": "interest", "L": "N", "R": "S", "left": "まだ形になっていない可能性", "right": "すでに確かめられている安心感", "prompt": "どちらに惹かれやすい？"}, {"axis": "TF", "layer": "core", "sub": "advice", "L": "T", "R": "F", "left": "原因や解決策を整理したくなる", "right": "まず気持ちを受け止めたくなる", "prompt": "相談された時、まず何をしたくなる？"}, {"axis": "TF", "layer": "core", "sub": "conflict", "L": "T", "R": "F", "left": "公平な基準を置きたい", "right": "お互いの納得点を探したい", "prompt": "意見が分かれた時は？"}, {"axis": "TF", "layer": "core", "sub": "feedback", "L": "T", "R": "F", "left": "良い点より改善点を言ってもらう方が助かる", "right": "改善点の前に意図を分かってもらえると助かる", "prompt": "自分の案には、どんな反応が助かる？"}, {"axis": "TF", "layer": "core", "sub": "attention", "L": "T", "R": "F", "left": "筋が通っているか", "right": "どう感じているか", "prompt": "人の話を聞く時、先に気になりやすいのは？"}, {"axis": "TF", "layer": "core", "sub": "fair", "L": "T", "R": "F", "left": "少し冷たく見えても、同じ基準で判断したい", "right": "少し基準が揺れても、事情を汲んで判断したい", "prompt": "判断する時、どちらを大切にしやすい？"}, {"axis": "TF", "layer": "core", "sub": "wording", "L": "T", "R": "F", "left": "誤解を避けるために正確な言い方を選びたい", "right": "受け取りやすくするために柔らかい言い方を選びたい", "prompt": "言い方を選ぶ時は？"}, {"axis": "TF", "layer": "adaptive", "sub": "help", "L": "T", "R": "F", "left": "打ち手を一緒に考える", "right": "安心できる状態を一緒に作る", "prompt": "相手を助ける時は？"}, {"axis": "TF", "layer": "adaptive", "sub": "group", "L": "T", "R": "F", "left": "論点をはっきりさせる役", "right": "空気を整える役", "prompt": "話し合いでは、どんな役に回りやすい？"}, {"axis": "JP", "layer": "core", "sub": "comfort", "L": "J", "R": "P", "left": "決まっていると気持ちが楽になる", "right": "決めすぎない方が気持ちが楽になる", "prompt": "決まりごとがあるとどう感じる？"}, {"axis": "JP", "layer": "core", "sub": "start", "L": "J", "R": "P", "left": "始める前に流れを決めておきたい", "right": "始めながら流れを見つけたい", "prompt": "何かを始める時は？"}, {"axis": "JP", "layer": "core", "sub": "holiday", "L": "J", "R": "P", "left": "大まかな予定がある方が過ごしやすい", "right": "その時の気分で動ける方が過ごしやすい", "prompt": "休日はどちらが過ごしやすい？"}, {"axis": "JP", "layer": "core", "sub": "finish", "L": "J", "R": "P", "left": "一つ終わらせてから次に行く", "right": "いくつか行き来しながら進める", "prompt": "進め方として自然なのは？"}, {"axis": "JP", "layer": "core", "sub": "change", "L": "J", "R": "P", "left": "できれば少ない方がよい", "right": "良くなるなら普通にあり", "prompt": "途中変更については？"}, {"axis": "JP", "layer": "core", "sub": "shopping", "L": "J", "R": "P", "left": "目的を決めてから行く方が楽", "right": "見ながら決める方が楽", "prompt": "買い物はどうする方が楽？"}, {"axis": "JP", "layer": "core", "sub": "open", "L": "J", "R": "P", "left": "少し気になりやすい", "right": "あまり気にならない", "prompt": "未定のものが残ると？"}, {"axis": "JP", "layer": "core", "sub": "day", "L": "J", "R": "P", "left": "予定通り進んだ日", "right": "予定外の発見があった日", "prompt": "どんな日に満足しやすい？"}], "activity": [{"axis": "EI", "layer": "core", "sub": "project_think", "L": "E", "R": "I", "left": "早めに人と話すと考えが進む", "right": "一人で整理する時間があると考えが進む", "prompt": "何かを進める時、考えはどう進みやすい？"}, {"axis": "EI", "layer": "core", "sub": "meeting", "L": "E", "R": "I", "left": "その場で考えを出すのは比較的できる", "right": "考えを少し持ち帰る方が出しやすい", "prompt": "話し合いの場では？"}, {"axis": "EI", "layer": "adaptive", "sub": "alignment", "L": "E", "R": "I", "left": "会話を増やして減らしたい", "right": "文章やメモで減らしたい", "prompt": "認識のズレはどう減らしたい？"}, {"axis": "EI", "layer": "adaptive", "sub": "prototype", "L": "E", "R": "I", "left": "早めに見せて反応から直したい", "right": "ある程度整えてから反応を見たい", "prompt": "人に見せるタイミングは？"}, {"axis": "NS", "layer": "core", "sub": "project_start", "L": "N", "R": "S", "left": "目的や背景", "right": "今やる作業", "prompt": "新しい取り組みでは、まず何を掴みたい？"}, {"axis": "NS", "layer": "core", "sub": "data", "L": "N", "R": "S", "left": "共通する型を探したくなる", "right": "それぞれの違いを正確に見たくなる", "prompt": "いくつかの事例を見ると？"}, {"axis": "NS", "layer": "core", "sub": "future", "L": "N", "R": "S", "left": "今後どう発展するか", "right": "今ある条件でできるか", "prompt": "案を考える時、気になるのは？"}, {"axis": "NS", "layer": "core", "sub": "mistake", "L": "N", "R": "S", "left": "考え方や設計", "right": "手順や確認漏れ", "prompt": "失敗した時は、どこから見直したい？"}, {"axis": "NS", "layer": "adaptive", "sub": "present", "L": "N", "R": "S", "left": "狙いや考え方", "right": "例や手順", "prompt": "説明では、何から伝えると進めやすい？"}, {"axis": "NS", "layer": "adaptive", "sub": "risk", "L": "N", "R": "S", "left": "具体化を急ぎすぎて可能性を狭めること", "right": "抽象的な話が長くなって実行に移れないこと", "prompt": "進める時に気になるのは？"}, {"axis": "NS", "layer": "adaptive", "sub": "check", "L": "N", "R": "S", "left": "別の見方や選択肢を増やしたい", "right": "確認済みの材料や条件を揃えたい", "prompt": "判断前に何をしたい？"}, {"axis": "NS", "layer": "adaptive", "sub": "learn_method", "L": "N", "R": "S", "left": "原理を掴んで応用する", "right": "見本を真似して慣れる", "prompt": "学び方として合うのは？"}, {"axis": "TF", "layer": "core", "sub": "review", "L": "T", "R": "F", "left": "改善点やリスク", "right": "良い点や意図", "prompt": "成果物を見る時、まず目に入りやすいのは？"}, {"axis": "TF", "layer": "core", "sub": "decision", "L": "T", "R": "F", "left": "根拠が揃っていること", "right": "人が納得して動けること", "prompt": "大事な判断では、何を重視する？"}, {"axis": "TF", "layer": "core", "sub": "issue", "L": "T", "R": "F", "left": "早めに論点として出したい", "right": "相手が受け取れる形にして出したい", "prompt": "問題がある時は？"}, {"axis": "TF", "layer": "core", "sub": "role", "L": "T", "R": "F", "left": "基準や優先順位", "right": "人の気持ちや温度差", "prompt": "話し合いでは、何を整理しがち？"}, {"axis": "TF", "layer": "adaptive", "sub": "support", "L": "T", "R": "F", "left": "はっきり指摘すること", "right": "言い方やタイミングを調整すること", "prompt": "相手のために必要だと思うのは？"}, {"axis": "TF", "layer": "adaptive", "sub": "explain", "L": "T", "R": "F", "left": "正確性と一貫性", "right": "相手の受け取りやすさ", "prompt": "説明では、どちらを優先しやすい？"}, {"axis": "JP", "layer": "core", "sub": "comfort_project", "L": "J", "R": "P", "left": "先に見えると内心は楽になる", "right": "動かせる方が内心は楽になる", "prompt": "範囲やゴールについては？"}, {"axis": "JP", "layer": "core", "sub": "start_project", "L": "J", "R": "P", "left": "始める前に置きたい", "right": "作りながら見つけたい", "prompt": "完成イメージはどう作りたい？"}, {"axis": "JP", "layer": "core", "sub": "uncertain", "L": "J", "R": "P", "left": "少し落ち着かない", "right": "探索中なら気になりにくい", "prompt": "未決定のことが多いと？"}, {"axis": "JP", "layer": "core", "sub": "switch", "L": "J", "R": "P", "left": "影響を確認してからしたい", "right": "良さそうなら早く試したい", "prompt": "方向転換は？"}, {"axis": "JP", "layer": "adaptive", "sub": "tool_deadline", "L": "J", "R": "P", "left": "締切や優先順位", "right": "余白や試行錯誤", "prompt": "進めるために使いたいのは？"}, {"axis": "JP", "layer": "adaptive", "sub": "group_action", "L": "J", "R": "P", "left": "決定事項と次の行動を明確にする", "right": "未確定の可能性も残しておく", "prompt": "人と進める時は？"}, {"axis": "JP", "layer": "adaptive", "sub": "completion", "L": "J", "R": "P", "left": "終わらせるために先に決める", "right": "良くするために最後まで改善余地を残す", "prompt": "完成ラインについては？"}, {"axis": "JP", "layer": "adaptive", "sub": "plan", "L": "J", "R": "P", "left": "迷いを減らすために使う", "right": "あとで書き換える仮説として使う", "prompt": "計画はどう使う？"}]};
+const allTypes = ["ENTP","ENTJ","INTP","INTJ","ENFP","ENFJ","INFP","INFJ","ESTP","ESTJ","ISTP","ISTJ","ESFP","ESFJ","ISFP","ISFJ"];
+let mode = "daily";
+let answers = JSON.parse(localStorage.getItem("cognitiveStyleAnswersV6") || '{"daily":{},"activity":{}}');
+let lastAnalysisPrompt = "";
+let lastDocumentPrompt = "";
+let lastSummary = "";
+
+function save(){ localStorage.setItem("cognitiveStyleAnswersV6", JSON.stringify(answers)); }
+function setMode(next){
+  mode = next;
+  document.getElementById("dailyBtn").classList.toggle("active", mode === "daily");
+  document.getElementById("activityBtn").classList.toggle("active", mode === "activity");
+  document.getElementById("currentModeText").textContent = mode === "daily" ? "現在：日常モード" : "現在：仕事モード";
+  render(); updateProgress();
+}
+
+function goWorkMode(){
+  setMode("activity");
+  setTimeout(() => {
+    const q = document.getElementById("questions");
+    if(q) q.scrollIntoView({behavior:"smooth", block:"start"});
+  }, 50);
+}
+
+function render(){
+  const root = document.getElementById("questions");
+  root.innerHTML = "";
+  DATA[mode].forEach((q, i) => {
+    const value = answers[mode][i];
+    const card = document.createElement("article");
+    card.className = "question";
+    card.innerHTML = `
+      <div class="q-head">
+        <div class="num">${i + 1}</div>
+        <div class="q-title">${q.prompt || "どちらが自然に近い？"}</div>
+      </div>
+      <div class="choice-text">
+        <div class="side choice-card-red"><span class="choice-badge red">赤の考え方</span>${q.left}</div>
+        <div class="side choice-card-blue"><span class="choice-badge blue">青の考え方</span>${q.right}</div>
+      </div>
+      <div class="scale">
+        ${[1,2,3,4,5].map(n => `
+          <button class="opt${n} ${Number(value) === n ? "selected" : ""}" onclick="answer('${mode}', ${i}, ${n})">
+            ${n}<span class="small">${label(n)}</span>
+          </button>
+        `).join("")}
+      </div>
+      <div class="labels"><span>赤に近い</span><span>どちらも近い</span><span>青に近い</span></div>
+    `;
+    root.appendChild(card);
+  });
+
+  const nav = document.createElement("div");
+  nav.className = "mode-end-card";
+  if(mode === "daily"){
+    nav.innerHTML = `
+      <h3>日常モードはここまで</h3>
+      <p>続けて、仕事や制作での考え方を入力できます。</p>
+      <button class="work-jump-btn" onclick="goWorkMode()">仕事モードを入力する</button>
+    `;
+  } else {
+    nav.innerHTML = `
+      <h3>仕事モードはここまで</h3>
+      <p>回答できたら、下の「結果を見る」からレポート用プロンプトをコピーできます。</p>
+      <button class="work-jump-btn" onclick="showResult()">結果を見る</button>
+    `;
+  }
+  root.appendChild(nav);
+}
+function label(n){ return {1:"かなり赤",2:"やや赤",3:"同じくらい",4:"やや青",5:"かなり青"}[n]; }
+function answer(m, idx, value){
+  answers[m][idx] = value; save(); render(); updateProgress();
+}
+function updateProgress(){
+  const total = DATA.daily.length + DATA.activity.length;
+  const count = Object.keys(answers.daily).length + Object.keys(answers.activity).length;
+  document.getElementById("progressText").textContent = `回答 ${count} / ${total}`;
+  document.getElementById("progressBar").style.width = `${(count / total) * 100}%`;
+}
+function emptyRaw(){ return {E:0,I:0,N:0,S:0,T:0,F:0,J:0,P:0}; }
+function addRaw(a,b,weight=1){ for(const k of Object.keys(b)) a[k] += b[k] * weight; return a; }
+function modeScore(m, layerFilter=null){
+  const raw = emptyRaw();
+  DATA[m].forEach((q, i) => {
+    if(layerFilter && q.layer !== layerFilter) return;
+    const v = answers[m][i];
+    if(!v) return;
+    const mag = Math.abs(Number(v) - 3);
+    if(mag === 0) return;
+    const trait = Number(v) < 3 ? q.L : q.R;
+    raw[trait] += mag;
+  });
+  return buildResult(raw);
+}
+function compositeCore(){
+  const dCore = modeScore("daily","core").raw;
+  const aCore = modeScore("activity","core").raw;
+  const dAd = modeScore("daily","adaptive").raw;
+  const aAd = modeScore("activity","adaptive").raw;
+  const raw = emptyRaw();
+  addRaw(raw, dCore, 1.20);
+  addRaw(raw, aCore, 1.00);
+  addRaw(raw, dAd, 0.20);
+  addRaw(raw, aAd, 0.25);
+  return buildResult(raw);
+}
+function modeSurface(m){
+  const core = modeScore(m,"core").raw;
+  const ad = modeScore(m,"adaptive").raw;
+  const raw = emptyRaw();
+  addRaw(raw, core, 1.0);
+  addRaw(raw, ad, 0.55);
+  return buildResult(raw);
+}
+function buildResult(raw){
+  function pair(a,b){
+    const total = raw[a] + raw[b];
+    if(total === 0) return {a,b,ap:50,bp:50,win:"X",winPct:50};
+    const ap = Math.round(raw[a] / total * 100);
+    const bp = 100 - ap;
+    let win = ap > bp ? a : b;
+    const winPct = Math.max(ap,bp);
+    if(winPct < 56) win = "X";
+    return {a,b,ap,bp,win,winPct};
+  }
+  const EI = pair("E","I"), NS = pair("N","S"), TF = pair("T","F"), JP = pair("J","P");
+  const type = `${EI.win}${NS.win}${TF.win}${JP.win}`;
+  return {raw,EI,NS,TF,JP,type,candidates:candidateScores(raw)};
+}
+function candidateScores(raw){
+  const pt = {
+    EI: Math.max(.001, raw.E + raw.I),
+    NS: Math.max(.001, raw.N + raw.S),
+    TF: Math.max(.001, raw.T + raw.F),
+    JP: Math.max(.001, raw.J + raw.P)
+  };
+  return allTypes.map(t => {
+    let s = 0;
+    s += raw[t[0]] / pt.EI * 25;
+    s += raw[t[1]] / pt.NS * 25;
+    s += raw[t[2]] / pt.TF * 25;
+    s += raw[t[3]] / pt.JP * 25;
+    return [t, Math.round(s)];
+  }).sort((a,b)=>b[1]-a[1]);
+}
+function primaryType(result){
+  return result.candidates[0]?.[0] || result.type;
+}
+function axisTypeText(result){
+  if(!result.type.includes("X")) return result.type;
+  return result.type + "（Xは拮抗している軸）";
+}
+
+function bars(result){
+  return [
+    bar("外向","内向",result.EI.ap,result.EI.bp,result.EI.win,result.EI.winPct),
+    bar("直観","感覚",result.NS.ap,result.NS.bp,result.NS.win,result.NS.winPct),
+    bar("思考","感情",result.TF.ap,result.TF.bp,result.TF.win,result.TF.winPct),
+    bar("計画","探索",result.JP.ap,result.JP.bp,result.JP.win,result.JP.winPct)
+  ].join("");
+}
+function bar(left,right,lp,rp,win,winPct){
+  const center = win === "X" ? `中間 ${winPct}%` : `${win} ${winPct}%`;
+  return `<div class="barline">
+    <div class="bar-top"><span>${left} ${lp}%</span><strong>${center}</strong><span>${right} ${rp}%</span></div>
+    <div class="bar"><span style="width:${lp}%"></span></div>
+  </div>`;
+}
+function ranks(result){
+  return result.candidates.slice(0,16).map(([t,p]) => `
+    <div class="rank-row"><strong>${t}</strong><div class="mini"><span style="width:${p}%"></span></div><span>${p}%</span></div>
+  `).join("");
+}
+function summary(result){
+  const parts = [`${result.type}寄り`];
+  if(result.EI.win === "X") parts.push("外向/内向は中間寄り");
+  if(result.NS.win === "X") parts.push("直観/感覚は中間寄り");
+  if(result.TF.win === "X") parts.push("思考/感情は中間寄り");
+  if(result.JP.win === "X") parts.push("計画/探索は中間寄り");
+  if(result.JP.win === "P" && result.JP.winPct >= 70) parts.push("探索・可変性が強め");
+  if(result.JP.win === "J" && result.JP.winPct >= 70) parts.push("収束・段取りが強め");
+  if(result.NS.win === "N" && result.NS.winPct >= 70) parts.push("意味・可能性を見る傾向");
+  if(result.NS.win === "S" && result.NS.winPct >= 70) parts.push("事実・具体を重視する傾向");
+  if(result.TF.win === "T" && result.TF.winPct >= 70) parts.push("基準・整合性を見る傾向");
+  if(result.TF.win === "F" && result.TF.winPct >= 70) parts.push("納得感・関係性を見る傾向");
+  return parts.join(" / ");
+}
+function confidenceLabel(core){
+  const top = core.candidates[0]?.[1] || 0;
+  const second = core.candidates[1]?.[1] || 0;
+  const gap = top - second;
+  const strongAxes = [core.EI, core.NS, core.TF, core.JP].filter(x => x.win !== "X" && x.winPct >= 65).length;
+  if(top >= 75 && gap >= 8 && strongAxes >= 3) return "高め";
+  if(top >= 65 && strongAxes >= 2) return "中程度";
+  return "低〜中程度";
+}
+
+function pairText(result, axis){
+  const map = {
+    EI:["外に出して考える", "内側で整える"],
+    NS:["意味・構造・可能性", "事実・具体・手順"],
+    TF:["基準・整合性・改善", "納得感・関係性・配慮"],
+    JP:["収束・段取り", "探索・余白"]
+  };
+  const p = axis === "EI" ? result.EI : axis === "NS" ? result.NS : axis === "TF" ? result.TF : result.JP;
+  const [left, right] = map[axis];
+  if(p.win === "X") return `${left}と${right}の両方が出ています`;
+  const label = p.win === p.a ? left : right;
+  return `${label}が優勢です`;
+}
+
+function strategyPattern(m, axis){
+  const qs = DATA[m].map((q,i)=>({q,i})).filter(x => x.q.layer === "adaptive" && x.q.axis === axis);
+  if(qs.length === 0) return {axis, items:[], left:0, right:0, neutral:0, text:"戦略質問がありません"};
+  const items = qs.map(({q,i}) => {
+    const v = answers[m][i];
+    let side = "中間";
+    let trait = "X";
+    if(Number(v) < 3){ side = "左"; trait = q.L; }
+    if(Number(v) > 3){ side = "右"; trait = q.R; }
+    const strength = !v ? 0 : Math.abs(Number(v)-3);
+    return {no:i+1, sub:q.sub, value:v || "-", side, trait, strength, left:q.left, right:q.right};
+  });
+  const left = items.filter(x => x.trait !== "X" && x.trait === qs[0].q.L).reduce((s,x)=>s+x.strength,0);
+  const right = items.filter(x => x.trait !== "X" && x.trait === qs[0].q.R).reduce((s,x)=>s+x.strength,0);
+  const neutral = items.filter(x => x.trait === "X").length;
+
+  let text = "";
+  if(left === right && left > 0){
+    text = "赤青が同量ですが、無傾向ではなく、質問小分類ごとに両方を使い分けている可能性があります。";
+  } else if(left > right){
+    text = `戦略面では${qs[0].q.L}側がやや優勢です。ただし反対側の回答がある場合は、使い分けとして読んでください。`;
+  } else if(right > left){
+    text = `戦略面では${qs[0].q.R}側がやや優勢です。ただし反対側の回答がある場合は、使い分けとして読んでください。`;
+  } else {
+    text = "回答が中間または未回答中心です。";
+  }
+  return {axis, items, left, right, neutral, text};
+}
+
+function allStrategyPatterns(){
+  const axes = ["EI","NS","TF","JP"];
+  const lines = [];
+  for(const m of ["daily","activity"]){
+    lines.push(m === "daily" ? "【日常モード 場面ごとの使い分け】" : "【仕事モード 場面ごとの使い分け】");
+    for(const axis of axes){
+      const p = strategyPattern(m, axis);
+      if(p.items.length === 0) continue;
+      lines.push(`■ ${axis}: ${p.text}`);
+      for(const item of p.items){
+        lines.push(`  - ${m === "daily" ? "日常" : "活動"}Q${item.no} / ${item.sub} / 回答:${item.value} / ${item.trait}側 / 赤:${item.left} / 青:${item.right}`);
+      }
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+function strategyHtml(){
+  const axes = ["EI","NS","TF","JP"];
+  const axisNames = {EI:"E/I",NS:"N/S",TF:"T/F",JP:"J/P"};
+  return ["daily","activity"].map(m => {
+    const modeName = m === "daily" ? "日常" : "活動";
+    const body = axes.map(axis => {
+      const p = strategyPattern(m, axis);
+      if(!p.items.length) return "";
+      const itemText = p.items.map(item => `${modeName}Q${item.no}:${item.trait}側`).join(" / ");
+      return `<div class="pill"><strong>${modeName} ${axisNames[axis]}：</strong>${p.text}<br><span class="sub">${itemText}</span></div>`;
+    }).join("");
+    return body;
+  }).join("");
+}
+
+function summaryCards(core, dailySurface, activitySurface){
+  const cards = [];
+  cards.push(`<div class="summary-item"><strong>基本：</strong>${core.type}。候補1位は${core.candidates[0][0]} ${core.candidates[0][1]}%。2位は${core.candidates[1][0]} ${core.candidates[1][1]}%。</div>`);
+  cards.push(`<div class="summary-item"><strong>日常：</strong>${dailySurface.type}。${summary(dailySurface)}</div>`);
+  cards.push(`<div class="summary-item"><strong>仕事：</strong>${activitySurface.type}。${summary(activitySurface)}</div>`);
+  cards.push(`<div class="summary-item"><strong>使い分け表示の注意：</strong>50/50は無傾向ではなく、小分類ごとの使い分けとして分析します。</div>`);
+  return cards.join("");
+}
+
+function overlayAnalysis(core){
+  const dAd = modeScore("daily","adaptive");
+  const aAd = modeScore("activity","adaptive");
+  const adRaw = emptyRaw();
+  addRaw(adRaw, dAd.raw, .45);
+  addRaw(adRaw, aAd.raw, .55);
+  const adaptive = buildResult(adRaw);
+  const overlays = [];
+  function add(axisName, corePair, adPair, text){
+    if(corePair.win !== "X" && adPair.win !== "X" && corePair.win !== adPair.win && adPair.winPct >= 60){
+      overlays.push(`<div class="pill"><strong>${axisName}補正：</strong>中核は${corePair.win}寄りだが、戦略として${adPair.win}側も使う傾向。${text}</div>`);
+    } else if(corePair.win === "X" || adPair.win === "X"){
+      overlays.push(`<div class="pill"><strong>${axisName}使い分け：</strong>単純集計では中間寄り。無傾向ではなく、小分類ごとの使い分けとして見る必要があります。</div>`);
+    } else if(corePair.win === adPair.win && adPair.winPct >= 70){
+      overlays.push(`<div class="pill"><strong>${axisName}一貫：</strong>中核も戦略も${corePair.win}寄り。場面が変わっても出やすい傾向です。</div>`);
+    }
+  }
+  add("E/I", core.EI, adaptive.EI, "話して進めるか、一人で整えるかを道具として切り替えている可能性があります。");
+  add("N/S", core.NS, adaptive.NS, "意味・可能性と、事実・具体確認を分けて使っている可能性があります。");
+  add("T/F", core.TF, adaptive.TF, "判断基準と伝え方・支援の仕方が分かれている可能性があります。");
+  add("J/P", core.JP, adaptive.JP, "内的な安心感と、進行のための段取りスキルが分かれている可能性があります。");
+  overlays.push(`<div class="pill"><strong>小分類ベースの戦略分析：</strong>下記のHTMLファイル出力プロンプトでは、戦略をXXXXや50/50で結論づけず、質問ごとの使い分けとしてレポート化します。</div>`);
+  overlays.push(strategyHtml());
+  return overlays.join("");
+}
+
+function answerText(v){
+  if(!v) return "未回答";
+  return {1:"かなり赤",2:"やや赤",3:"同じくらい",4:"やや青",5:"かなり青"}[v];
+}
+function answerLog(){
+  const lines = [];
+  for(const m of ["daily","activity"]){
+    lines.push(m === "daily" ? "【日常モード 回答ログ】" : "【仕事モード 回答ログ】");
+    DATA[m].forEach((q,i)=>{
+      const v = answers[m][i];
+      const chosen = !v ? "未回答" : (Number(v) < 3 ? "赤" : Number(v) > 3 ? "青" : "同じくらい");
+      lines.push(`${i+1}. 軸:${q.axis} 層:${q.layer} 小分類:${q.sub} / 回答:${v || "-"}(${answerText(v)}) / 選択:${chosen}`);
+      lines.push(`   赤: ${q.left}`);
+      lines.push(`   青: ${q.right}`);
+    });
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+function resultBlock(core, dailySurface, activitySurface){
+  const dCore = modeScore("daily","core"), dAd = modeScore("daily","adaptive");
+  const aCore = modeScore("activity","core"), aAd = modeScore("activity","adaptive");
+  return [
+    "【集計結果】",
+    "推定タイプ: " + primaryType(core),
+    "軸別表示: " + axisTypeText(core),
+    "16タイプ全候補: " + core.candidates.slice(0,16).map(x => x[0] + " " + x[1] + "%").join(" / "),
+    "総合軸: E" + core.EI.ap + " I" + core.EI.bp + " / N" + core.NS.ap + " S" + core.NS.bp + " / T" + core.TF.ap + " F" + core.TF.bp + " / J" + core.JP.ap + " P" + core.JP.bp,
+    "判定信頼度目安: " + confidenceLabel(core),
+    "",
+    "日常表面: " + dailySurface.type + " / " + summary(dailySurface),
+    "活動表面: " + activitySurface.type + " / " + summary(activitySurface),
+    "",
+    "【自然に出やすい傾向のスコア】",
+    "日常の基本傾向: " + dCore.type + " E" + dCore.EI.ap + " I" + dCore.EI.bp + " / N" + dCore.NS.ap + " S" + dCore.NS.bp + " / T" + dCore.TF.ap + " F" + dCore.TF.bp + " / J" + dCore.JP.ap + " P" + dCore.JP.bp,
+    "仕事時の基本傾向: " + aCore.type + " E" + aCore.EI.ap + " I" + aCore.EI.bp + " / N" + aCore.NS.ap + " S" + aCore.NS.bp + " / T" + aCore.TF.ap + " F" + aCore.TF.bp + " / J" + aCore.JP.ap + " P" + aCore.JP.bp,
+    "",
+    "【場面に合わせた使い分けの扱い】",
+    "日常の使い分け単純集計: " + dAd.type + " E" + dAd.EI.ap + " I" + dAd.EI.bp + " / N" + dAd.NS.ap + " S" + dAd.NS.bp + " / T" + dAd.TF.ap + " F" + dAd.TF.bp + " / J" + dAd.JP.ap + " P" + dAd.JP.bp,
+    "仕事時の使い分け単純集計: " + aAd.type + " E" + aAd.EI.ap + " I" + aAd.EI.bp + " / N" + aAd.NS.ap + " S" + aAd.NS.bp + " / T" + aAd.TF.ap + " F" + aAd.TF.bp + " / J" + aAd.JP.ap + " P" + aAd.JP.bp,
+    "注意: 50/50やXXXXは『特徴がない』という意味ではありません。場面によって赤青の行動を使い分けている可能性が高いため、下記の質問ごとの使い分けを優先してください。",
+    "",
+    allStrategyPatterns()
+  ].join("\n");
+}
+function analysisPrompt(core, dailySurface, activitySurface){
+  return [
+    "あなたはMBTI風の認知スタイル診断を読み解く分析者です。",
+    "以下の集計結果と質問ごとの回答ログをもとに、タイプを断定せず、根拠つきで分析してください。",
+    "",
+    "【重要な分析ルール】",
+    "1. 総合結果だけをそのまま採用しない。必ず回答ログを見て検証する。",
+    "2. core は『自然に出やすい傾向』、adaptive は『場面に合わせた使い分け・工夫』として説明する。",
+    "3. レポート本文では、できるだけ『中核』『補正』『adaptive』のような硬い言葉を使わず、誰でも分かる言葉に言い換える。",
+    "4. 戦略スコアが50/50やXXXXになっても、無傾向と判断しない。質問ごとの回答を見て、使い分けとして読む。",
+    "5. N/Sでは、具体例から全体を掴む人を単純にSと断定しない。意味・可能性を見ているのか、事実・手順を見ているのかを分ける。",
+    "6. T/Fでは、判断基準と伝え方を分ける。T型でも伝え方でF的配慮を使う場合がある。",
+    "7. J/Pでは、安心するから決めたいのか、有効だから決めるのかを分ける。P型でも道具としてJ的行動を使うことがある。",
+    "8. E/Iでは、思考が進む場所と回復方法を分ける。話すと思考が進むが、一人で回復する人もいる。",
+    "9. 候補タイプは1位だけでなく、2位以下との差・理由も比較する。",
+    "10. 根拠を書く時は、質問番号を挙げる。例: 日常Q1、仕事Q15。",
+    "11. 医学的・心理学的な診断のように断定しない。あくまで自己理解用の仮説として扱う。",
+    "12. できるだけ現実世界の具体例に置き換えて説明する。例: 会議、友人との相談、買い物、旅行、仕事の進め方、アプリ開発、チーム作業など。",
+    "",
+    "【質問のフラットさを確認するルール】",
+    "- 片方の選択肢だけが『賢そう』『仕事ができそう』『優しそう』『大人っぽい』に見えないかを確認してください。",
+    "- 赤/青の色には意味を持たせないでください。赤が良い、青が良いという解釈はしないでください。",
+    "- 質問文に社会的望ましさが混ざっていそうな場合は、その質問だけを強い根拠にしすぎないでください。",
+    "- 片方が抽象的で、もう片方が具体的すぎる場合は、回答者が言葉の印象で選んだ可能性も考えてください。",
+    "- T/Fでは、F側を『感情的』、T側を『優秀』と読まないでください。どちらも別の合理性として扱ってください。",
+    "- J/Pでは、J側を『きちんとしている』、P側を『だらしない』と読まないでください。どちらも別の進め方として扱ってください。",
+    "- N/Sでは、N側を『賢い』、S側を『現実的なだけ』と読まないでください。どちらも別の情報処理として扱ってください。",
+    "",
+    resultBlock(core, dailySurface, activitySurface),
+    "",
+    answerLog(),
+    "",
+    "上記をもとに、専門用語を避け、具体例を交えた分かりやすい分析をしてください。"
+  ].join("\n");
+}
+function documentPrompt(core, dailySurface, activitySurface){
+  return [
+    "あなたは認知スタイル診断レポートを作成する専門ライター兼分析者です。",
+    "以下のMBTI風診断の集計結果と質問ごとの回答ログをもとに、受検者向けの詳細なHTMLレポートを作成してください。",
+    "",
+    "【最重要出力ルール】",
+    "- 可能なら、出力結果を cognitive-style-report.html というHTMLファイルとして作成し、ダウンロードできる形で提供してください。",
+    "- ファイル作成機能がない環境では、HTML本文だけを出力してください。",
+    "- 出力はMarkdownではなく、完全なHTMLにしてください。",
+    "- <!doctype html> から始まる、単体で保存して開けるHTMLにしてください。",
+    "- CSSは<style>内に含めてください。外部ファイルや外部CDNは使わないでください。",
+    "- JavaScriptは不要です。",
+    "- コードフェンス ```html は使わず、HTML本文だけを出力してください。",
+    "- 文章は日本語で書いてください。",
+    "- MBTIのタイプ名は使ってよいですが、診断ではなく自己理解用の仮説として扱ってください。\n    - 16タイプ全候補を確認し、ランキングには全16タイプを表示してください。\n    - 画面上のX表示は『タイプが存在しない』という意味ではなく、軸が拮抗しているという意味です。最終的な推定タイプは16タイプ候補の1位を使ってください。",
+    "",
+    "【文章トーンの最重要ルール】",
+    "- 誰でも分かる、やさしく丁寧な言葉で書いてください。",
+    "- 『中核』『補正』『adaptive』『認知機能』などの硬い専門用語は、できるだけ本文に出さないでください。",
+    "- 内部データの core は『自然に出やすい傾向』『基本の傾向』と表現してください。",
+    "- 内部データの adaptive は『場面に合わせた使い分け』『必要な時に使う工夫』と表現してください。",
+    "- 難しい言葉を使う場合は、必ず直後にやさしい説明を添えてください。",
+    "- 読者に語りかけるように、温かいが甘すぎない文章にしてください。",
+    "- 断定しすぎず、『〜の可能性があります』『〜と読むのが自然です』のように書いてください。",
+    "",
+    "【レイアウトの最重要ルール】",
+    "- とにかく見やすいレイアウトにこだわってください。",
+    "- スマホで読んでも疲れないように、余白を広めにしてください。",
+    "- 長文をベタ書きせず、カード、表、短い見出し、箇条書きを使ってください。",
+    "- 重要な結論は、最初の大きな要約カードにまとめてください。",
+    "- 『長所』『短所』『向いている仕事』『向きにくい環境』『相性』はカード型に分けてください。",
+    "- 1616タイプ候補ランキングは、全16タイプを表または横棒風の見やすい表示にしてください。",
+    "- 各章の最初に、3行以内の簡単な要約を入れてください。",
+    "- 色は落ち着いたトーンにしてください。派手すぎる装飾は避けてください。",
+    "- 印刷しても読めるように、背景色だけに頼らないデザインにしてください。",
+    "",
+    "【具体例の最重要ルール】",
+    "- できるだけ現実世界の具体例に当てはめて説明してください。",
+    "- 例として、会議、友人からの相談、買い物、旅行計画、仕事の進め方、チーム作業、アプリ開発、資料作成、勉強、家族との予定調整などを使ってください。",
+    "- ただし、受検者の回答ログに根拠がない具体例を断定しないでください。",
+    "- 具体例は『たとえば〜のような場面では』という形で、可能性として書いてください。",
+    "",
+    "【分析の基本ルール】",
+    "1. 集計結果をそのまま結論にしないでください。必ず回答ログの質問番号を根拠にして検証してください。",
+    "2. 受検者の『自然に出やすい傾向』と『場面に合わせた使い分け』を分けてください。",
+    "3. 戦略スコアが50/50やXXXXになった場合、それを『中立』『無傾向』『診断不能』と読まないでください。",
+    "4. 50/50は、複数の質問で赤青の行動を使い分けている可能性として読み、必ず質問ごとの回答を確認してください。",
+    "5. 16タイプ全候補を確認し、1位だけでなく2位・3位との差を比較してください。",
+    "6. 受検者を過度に褒めず、長所・短所・注意点をバランスよく書いてください。",
+    "7. 医学的・職業適性検査のように断定しないでください。職業や相性は可能性として書いてください。",
+    "",
+    "【質問のフラットさを確認するルール】",
+    "- 片方の選択肢だけが『賢そう』『仕事ができそう』『優しそう』『大人っぽい』に見えないかを確認してください。",
+    "- 赤/青の色には意味を持たせないでください。赤が良い、青が良いという解釈はしないでください。",
+    "- 質問文に社会的望ましさが混ざっていそうな場合は、その質問だけを強い根拠にしすぎないでください。",
+    "- 片方が抽象的で、もう片方が具体的すぎる場合は、回答者が言葉の印象で選んだ可能性も考えてください。",
+    "- T/Fでは、F側を『感情的』、T側を『優秀』と読まないでください。どちらも別の合理性として扱ってください。",
+    "- J/Pでは、J側を『きちんとしている』、P側を『だらしない』と読まないでください。どちらも別の進め方として扱ってください。",
+    "- N/Sでは、N側を『賢い』、S側を『現実的なだけ』と読まないでください。どちらも別の情報処理として扱ってください。",
+    "",
+    "【E/Iの読み方】",
+    "- E/Iを『人好き/人嫌い』で判断しないでください。",
+    "- 見るポイントは次の4つです。",
+    "  1. 考えが進みやすい場所: 話しながら考えるか、一人で考えるか。",
+    "  2. 元気の戻し方: 人といると回復するか、一人で回復するか。",
+    "  3. 考えの出し方: 粗く外に出して磨くか、少し整えてから出すか。",
+    "  4. 場の動かし方: 会話で動かすか、観察や文章で整えるか。",
+    "- 例: 話すと思考が進むが、一人で休む時間も必要な人は、『外向型』と単純化せず、『話すことで考えが進みやすいが、休む時は一人時間も大切』と表現してください。",
+    "- 根拠には日常Q1〜Q8、仕事Q1〜Q4を中心に使ってください。",
+    "",
+    "【N/Sの読み方】",
+    "- N/Sを『抽象が好き/具体が好き』だけで判断しないでください。",
+    "- 見るポイントは次の4つです。",
+    "  1. 最初に見るもの: 意味・構造・可能性か、事実・手順・現物か。",
+    "  2. 理解の入り口: 全体像から入るか、一つ試して掴むか。",
+    "  3. 確かめ方: 別の見方や仮説を増やすか、確認済みの材料を揃えるか。",
+    "  4. 説明の仕方: 考え方や狙いから伝えるか、例や手順から伝えるか。",
+    "- 『具体例から全体を掴む人』を単純にSと断定しないでください。",
+    "- 『現実に使えるかを見るN型』『具体で確かめるN型』『意味づけが得意なS型』の可能性も考えてください。",
+    "- UI、操作性、実用性、現場感を重視している場合、それが基本のS傾向なのか、N的な仮説を確かめるための具体化なのかを分けてください。",
+    "- 根拠には日常Q9〜Q16、仕事Q5〜Q12を中心に使ってください。",
+    "",
+    "【T/Fの読み方】",
+    "- T/Fを『冷たい/優しい』『論理的/感情的』で判断しないでください。",
+    "- 見るポイントは次の4つです。",
+    "  1. 判断基準: 根拠・公平性・整合性か、納得感・関係性・個別事情か。",
+    "  2. 最初に目が行くもの: 問題点やリスクか、意図や気持ちか。",
+    "  3. フィードバックの好み: 改善点を求めるか、意図の理解や安心感を求めるか。",
+    "  4. 伝え方: 正確性を優先するか、受け取りやすさを優先するか。",
+    "- T寄りの人でも、伝える時には相手が受け取りやすい言い方を選ぶことがあります。",
+    "- F寄りの人でも、判断する時には論理や公平性を大切にすることがあります。",
+    "- 『判断するときの基準』と『相手に伝えるときの気づかい』を分けてください。",
+    "- 根拠には日常Q17〜Q24、仕事Q13〜Q18を中心に使ってください。",
+    "",
+    "【J/Pの読み方】",
+    "- J/Pを『計画的/だらしない』で判断しないでください。",
+    "- 見るポイントは次の4つです。",
+    "  1. 気持ちの楽さ: 決まっていると楽か、余白があると楽か。",
+    "  2. 始め方: 先に流れを決めるか、始めながら見つけるか。",
+    "  3. 変更への強さ: 変更を少なくしたいか、良くなるなら変えたいか。",
+    "  4. 計画の使い方: 安心のために使うのか、進めるための道具として使うのか。",
+    "- P寄りの人でも、仕事やチーム活動では決定事項や次の行動を明確にすることがあります。",
+    "- J寄りの人でも、創造や探索のために余白を残すことがあります。",
+    "- 『決まっていると安心する』と『進めるために決める』を必ず分けてください。",
+    "- 根拠には日常Q25〜Q32、仕事Q19〜Q26を中心に使ってください。",
+    "",
+    "【50/50の読み方】",
+    "- E50/I50、N50/S50、T50/F50、J50/P50 のように出た場合、単純に『中間』とだけ書かないでください。",
+    "- その軸の質問を1問ずつ見て、どの場面で赤側の考え方を選び、どの場面で青側の考え方を選んでいるかを説明してください。",
+    "- 例: J/Pで、試行錯誤はPだが、人と進める時はJなら、『自由に改善したい気持ちがある一方で、チームで動く時は次の行動をはっきりさせる』と書いてください。",
+    "- 例: N/Sで、説明は具体例、判断は構造なら、『人に伝える時は具体例を使い、自分で判断する時は全体の構造を見る』と書いてください。",
+    "",
+    "【HTMLレポートの必須構成】",
+    "1. 表紙/タイトル",
+    "2. まず結論: 3分で読める要約",
+    "3. 基本タイプの見立て",
+    "4. 16タイプ候補ランキング",
+    "5. 日常で出やすい傾向",
+    "6. 仕事で出やすい傾向",
+    "7. 考え方のクセを4つに分けて見る",
+    "8. 場面ごとの使い分け",
+    "9. 一見矛盾して見える回答の解釈",
+    "10. 長所・強み",
+    "11. 短所・注意点",
+    "12. 向いている仕事・職業傾向",
+    "13. 向きにくい仕事・注意が必要な環境",
+    "14. 相性がよさそうな性格傾向",
+    "15. 衝突しやすい性格傾向",
+    "16. 日常で活かすヒント",
+    "17. 最終まとめ",
+    "",
+    "【各セクションの書き方】",
+    "- 各セクションの冒頭に、短い要約カードを置いてください。",
+    "- できるだけ『つまりこういうこと』が分かる文章にしてください。",
+    "- タイプ名だけで終わらせず、実際の行動例に落とし込んでください。",
+    "- 長所は『どんな場面で役立つか』まで書いてください。",
+    "- 短所は『どうすれば扱いやすくなるか』まで書いてください。",
+    "- 向いている仕事は、職業名だけでなく、向いている作業環境や役割も書いてください。",
+    "- 向きにくい仕事は、職業そのものを否定せず、『こういう条件だと負荷が高い』という形で書いてください。",
+    "- 相性は、MBTIタイプ名だけでなく、『話し合い方』『決め方』『感情面の扱い方』などで説明してください。",
+    "",
+    "【入力データ】",
+    resultBlock(core, dailySurface, activitySurface),
+    "",
+    answerLog(),
+    "",
+    "以上をもとに、可能ならHTMLファイルを作成して提供してください。ファイル作成機能がない場合は、完全なHTML本文だけを出力してください。"
+  ].join("\n");
+}
+function showResult(){
+  const core = compositeCore();
+  const dailySurface = modeSurface("daily");
+  const activitySurface = modeSurface("activity");
+
+  document.getElementById("coreType").textContent = primaryType(core);
+  document.getElementById("confidenceText").textContent = "信頼度: " + confidenceLabel(core);
+  document.getElementById("dailyType").textContent = dailySurface.type;
+  document.getElementById("activityType").textContent = activitySurface.type;
+  document.getElementById("dailySummary").textContent = summary(dailySurface);
+  document.getElementById("activitySummary").textContent = summary(activitySurface);
+  document.getElementById("summaryCards").innerHTML = summaryCards(core, dailySurface, activitySurface);
+  document.getElementById("coreBars").innerHTML = bars(core);
+  document.getElementById("dailyBars").innerHTML = bars(dailySurface);
+  document.getElementById("activityBars").innerHTML = bars(activitySurface);
+  document.getElementById("coreRank").innerHTML = ranks(core);
+  document.getElementById("overlay").innerHTML = overlayAnalysis(core);
+
+  lastSummary = resultBlock(core, dailySurface, activitySurface);
+  lastAnalysisPrompt = analysisPrompt(core, dailySurface, activitySurface);
+  lastDocumentPrompt = documentPrompt(core, dailySurface, activitySurface);
+
+  document.getElementById("promptBox").value = lastDocumentPrompt;
+  document.getElementById("result").classList.remove("hidden");
+  document.getElementById("result").scrollIntoView({behavior:"smooth", block:"start"});
+}
+async function copyText(text){
+  if(!text) showResult();
+  const content = text || lastDocumentPrompt;
+  try {
+    await navigator.clipboard.writeText(content);
+    showToast("コピーしました");
+  } catch(e) {
+    const box = document.getElementById("promptBox");
+    box.value = content;
+    box.focus();
+    box.select();
+    try {
+      document.execCommand("copy");
+      showToast("コピーしました");
+    } catch(err) {
+      showToast("下の欄を長押しコピーしてください");
+    }
+  }
+}
+function copyDocumentPrompt(){ if(!lastDocumentPrompt) showResult(); document.getElementById("promptBox").value = lastDocumentPrompt; copyText(lastDocumentPrompt); }
+function copyAnalysisPrompt(){ if(!lastAnalysisPrompt) showResult(); document.getElementById("promptBox").value = lastAnalysisPrompt; copyText(lastAnalysisPrompt); }
+function copySummary(){ if(!lastSummary) showResult(); document.getElementById("promptBox").value = lastSummary; copyText(lastSummary); }
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1800);
+}
+function resetAll(){
+  if(!confirm("回答をすべてリセットしますか？")) return;
+  answers = {daily:{}, activity:{}};
+  save();
+  lastAnalysisPrompt = "";
+  lastDocumentPrompt = "";
+  lastSummary = "";
+  document.getElementById("result").classList.add("hidden");
+  render(); updateProgress();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+render(); updateProgress();
+</script>
+</body>
+</html>
